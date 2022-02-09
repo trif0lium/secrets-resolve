@@ -1,0 +1,30 @@
+name: goreleaser
+on:
+  push:
+    branches:
+    tags:
+      - "v*"
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      - if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          workdir: cli
+          args: release --snapshot --skip-publish --rm-dist
+      - if: startsWith(github.ref, 'refs/tags/v')
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: 0.174.2
+          workdir: cli
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
