@@ -1,0 +1,9 @@
+project_name: secrets-resolve
+builds:
+  - main: ./cmd/secrets-resolve/main.go
+    env: [CGO_ENABLED=0]
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
