@@ -7,15 +7,16 @@ import (
 	"strings"
 	"sync"
 
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"gocloud.dev/gcp"
+	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/gcpsecretmanager"
-	"google.golang.org/genproto/googleapis/api"
 )
 
 func main() {
 	ctx := context.Background()
 	var gcpInit sync.Once
-	var gcpSecretManagerClient *api.Client
+	var gcpSecretManagerClient *secretmanager.Client
 	var gcpSecretManagerClientCleanFunc func()
 
 	for _, e := range os.Environ() {
@@ -33,11 +34,28 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				gcpSecretManagerClient, gcpSecretManagerClientCleanFunc, err := gcpsecretmanager.Dial(ctx, gcp.TokenSource(creds))
+				client, cleanFunc, err := gcpsecretmanager.Dial(ctx, creds.TokenSource)
 				if err != nil {
 					panic(err)
 				}
+				gcpSecretManagerClient = client
+				gcpSecretManagerClientCleanFunc = cleanFunc
 			})
+			gcpProjectID := parts[0]
+			secretID := parts[1]
+			variableKey := gcpsecretmanager.SecretKey(gcp.ProjectID(gcpProjectID), secretID)
+			v, err := gcpsecretmanager.OpenVariable(gcpSecretManagerClient, variableKey, runtimevar.StringDecoder, nil)
+			if err != nil {
+				log.Printf("failed to construct a *runtimevar.Variable for '%s': %v", envValue, err)
+				continue
+			}
+			secretValue, err := v.Latest(ctx)
+			if err != nil {
+				log.Printf("failed to resolve secret '%s': %v", envValue, err)
+				continue
+			}
+			os.Setenv(envKey, secretValue.Value.(string))
+			v.Close()
 		}
 	}
 
