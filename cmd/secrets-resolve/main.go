@@ -32,11 +32,13 @@ func main() {
 			gcpInit.Do(func() {
 				creds, err := gcp.DefaultCredentials(ctx)
 				if err != nil {
-					panic(err)
+					log.Print(err)
+					os.Exit(0)
 				}
 				client, cleanFunc, err := gcpsecretmanager.Dial(ctx, creds.TokenSource)
 				if err != nil {
-					panic(err)
+					log.Print(err)
+					os.Exit(0)
 				}
 				gcpSecretManagerClient = client
 				gcpSecretManagerClientCleanFunc = cleanFunc
